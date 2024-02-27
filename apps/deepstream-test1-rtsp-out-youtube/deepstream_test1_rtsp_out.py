@@ -246,7 +246,7 @@ def main(args):
     pgie.set_property('config-file-path', "dstest1_pgie_config.txt")
     
     print("Adding elements to Pipeline \n")
-    pipeline.add(source)
+    #pipeline.add(source)
     #pipeline.add(h264parser)
     #pipeline.add(decoder)
     pipeline.add(streammux)
