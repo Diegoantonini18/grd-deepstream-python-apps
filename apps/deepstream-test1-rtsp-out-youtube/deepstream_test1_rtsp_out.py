@@ -27,7 +27,7 @@ gi.require_version('GstRtspServer', '1.0')
 from gi.repository import GLib, Gst, GstRtspServer
 from common.is_aarch_64 import is_aarch64
 from common.bus_call import bus_call
-
+import subprocess
 import pyds
 
 PGIE_CLASS_ID_VEHICLE = 0
@@ -119,6 +119,14 @@ def osd_sink_pad_buffer_probe(pad,info,u_data):
             break
 			
     return Gst.PadProbeReturn.OK	
+
+def get_youtube_video_url(youtube_url):
+    cmd = ["yt-dlp", "-f", "best", "-g", youtube_url]
+    result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    if result.returncode == 0:
+        return result.stdout.strip()
+    else:
+        raise Exception("Error al obtener la URL del video: " + result.stderr)
 
 
 def main(args):
@@ -224,6 +232,8 @@ def main(args):
     sink.set_property('port', updsink_port_num)
     sink.set_property('async', False)
     sink.set_property('sync', 1)
+    youtube_url = "https://www.youtube.com/watch?v=LY2XEQ_SSXA"
+    stream_path = get_youtube_video_url(youtube_url)
     
     print("Playing file %s " %stream_path)
     source.set_property('uri', stream_path)
