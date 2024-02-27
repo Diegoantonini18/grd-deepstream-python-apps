@@ -27,9 +27,13 @@ gi.require_version('GstRtspServer', '1.0')
 from gi.repository import GLib, Gst, GstRtspServer
 from common.is_aarch_64 import is_aarch64
 from common.bus_call import bus_call
-import subprocess
-import pyds
 
+import pyds
+from vidgear.gears import CamGear
+# Additional imports for threading and OpenCV conversion
+import threading
+import cv2
+import numpy as np
 PGIE_CLASS_ID_VEHICLE = 0
 PGIE_CLASS_ID_BICYCLE = 1
 PGIE_CLASS_ID_PERSON = 2
@@ -120,14 +124,6 @@ def osd_sink_pad_buffer_probe(pad,info,u_data):
 			
     return Gst.PadProbeReturn.OK	
 
-def get_youtube_video_url(youtube_url):
-    cmd = ["yt-dlp", "-f", "best", "-g", youtube_url]
-    result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    if result.returncode == 0:
-        return result.stdout.strip()
-    else:
-        raise Exception("Error al obtener la URL del video: " + result.stderr)
-
 
 def main(args):
     # Standard GStreamer initialization
@@ -141,20 +137,27 @@ def main(args):
         sys.stderr.write(" Unable to create Pipeline \n")
     
     # Source element for reading from the file
-    print("Creating Source \n ")
+    #print("Creating Source \n ")
     #source = Gst.ElementFactory.make("filesrc", "file-source")
-    source = Gst.ElementFactory.make("uridecodebin", "uri-source")
-    if not source:
-        sys.stderr.write(" Unable to create Source \n")
+    #if not source:
+    #    sys.stderr.write(" Unable to create Source \n")
     
     # Since the data format in the input file is elementary h264 stream,
     # we need a h264parser
-    print("Creating H264Parser \n")
-    h264parser = Gst.ElementFactory.make("h264parse", "h264-parser")
-    if not h264parser:
-        sys.stderr.write(" Unable to create h264 parser \n")
+    #print("Creating H264Parser \n")
+    #h264parser = Gst.ElementFactory.make("h264parse", "h264-parser")
+    #if not h264parser:
+    #    sys.stderr.write(" Unable to create h264 parser \n")
     
     # Use nvdec_h264 for hardware accelerated decode on GPU
+    appsrc = Gst.ElementFactory.make("appsrc", "app-source")
+    if not appsrc:
+        sys.stderr.write(" Unable to create appsrc \n")
+    appsrc.set_property("format", Gst.Format.TIME)
+    caps = Gst.Caps.from_string("video/x-raw, format=BGR, width=1280, height=720, pixel-aspect-ratio=1/1, framerate=30/1")
+    appsrc.set_property("caps", caps)
+
+
     print("Creating Decoder \n")
     decoder = Gst.ElementFactory.make("nvv4l2decoder", "nvv4l2-decoder")
     if not decoder:
@@ -232,11 +235,9 @@ def main(args):
     sink.set_property('port', updsink_port_num)
     sink.set_property('async', False)
     sink.set_property('sync', 1)
-    youtube_url = "https://www.youtube.com/watch?v=LY2XEQ_SSXA"
-    stream_path = get_youtube_video_url(youtube_url)
     
     print("Playing file %s " %stream_path)
-    source.set_property('uri', stream_path)
+    source.set_property('location', stream_path)
     streammux.set_property('width', 1920)
     streammux.set_property('height', 1080)
     streammux.set_property('batch-size', 1)
@@ -246,8 +247,8 @@ def main(args):
     
     print("Adding elements to Pipeline \n")
     pipeline.add(source)
-    pipeline.add(h264parser)
-    pipeline.add(decoder)
+    #pipeline.add(h264parser)
+    #pipeline.add(decoder)
     pipeline.add(streammux)
     pipeline.add(pgie)
     pipeline.add(nvvidconv)
@@ -264,8 +265,8 @@ def main(args):
     # caps -> encoder -> rtppay -> udpsink
     
     print("Linking elements in the Pipeline \n")
-    source.link(h264parser)
-    h264parser.link(decoder)
+    #source.link(h264parser)
+    #h264parser.link(decoder)
     sinkpad = streammux.get_request_pad("sink_0")
     if not sinkpad:
         sys.stderr.write(" Unable to get the sink pad of streammux \n")
@@ -316,6 +317,25 @@ def main(args):
     # start play back and listen to events
     print("Starting pipeline \n")
     pipeline.set_state(Gst.State.PLAYING)
+    def push_frames():
+        stream = CamGear(source='https://www.youtube.com/watch?v=LY2XEQ_SSXA', stream_mode=True, logging=True).start()
+        
+        while True:
+            frame = stream.read()
+            if frame is None:
+                break
+            
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            frame = np.array(frame, dtype=np.uint8)
+            data = frame.tobytes()
+            buf = Gst.Buffer.new_allocate(None, len(data), None)
+            buf.fill(0, data)
+            appsrc.emit("push-buffer", buf)
+        
+        stream.stop()
+        appsrc.emit("end-of-stream")
+    thread = threading.Thread(target=push_frames)
+    thread.start()
     try:
         loop.run()
     except:
