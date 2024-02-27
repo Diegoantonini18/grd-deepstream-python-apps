@@ -20,13 +20,13 @@
 import argparse
 import sys
 sys.path.append('../')
-import sys
 
 import gi
 gi.require_version('Gst', '1.0')
 gi.require_version('GstRtspServer', '1.0')
 from gi.repository import GLib, Gst, GstRtspServer
 from common.is_aarch_64 import is_aarch64
+from common.bus_call import bus_call
 
 import pyds
 
@@ -36,23 +36,10 @@ PGIE_CLASS_ID_PERSON = 2
 PGIE_CLASS_ID_ROADSIGN = 3
 MUXER_BATCH_TIMEOUT_USEC = 33000
 
-
-
-def bus_call(bus, message, loop, pipeline):
-    t = message.type
-    if t == Gst.MessageType.EOS:
-        sys.stdout.write("End-of-stream. Restarting pipeline.\n")
-        pipeline.set_state(Gst.State.NULL)  # Set the pipeline to NULL state
-        pipeline.set_state(Gst.State.PLAYING)  # Set the pipeline back to PLAYING state
-    elif t==Gst.MessageType.WARNING:
-        err, debug = message.parse_warning()
-        sys.stderr.write("Warning: %s: %s\n" % (err, debug))
-    elif t == Gst.MessageType.ERROR:
-        err, debug = message.parse_error()
-        sys.stderr.write("Error: %s: %s\n" % (err, debug))
-        loop.quit()
-    return True
-
+def on_eos(bus, msg, pipeline):
+    print("End-of-stream, seeking to start of the video")
+    if not pipeline.seek_simple(Gst.Format.TIME, Gst.SeekFlags.FLUSH | Gst.SeekFlags.KEY_UNIT, 0):
+        sys.stderr.write("Seeking to start of the video failed.\n")
 
 def osd_sink_pad_buffer_probe(pad,info,u_data):
     frame_number=0
@@ -295,7 +282,8 @@ def main(args):
     loop = GLib.MainLoop()
     bus = pipeline.get_bus()
     bus.add_signal_watch()
-    bus.connect("message", lambda bus, message: bus_call(bus, message, loop, pipeline))
+    bus.connect("message::eos", on_eos, pipeline)
+
     
     # Start streaming
     rtsp_port_num = 8554
