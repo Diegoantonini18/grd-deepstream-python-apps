@@ -236,8 +236,8 @@ def main(args):
     sink.set_property('async', False)
     sink.set_property('sync', 1)
     
-    print("Playing file %s " %stream_path)
-    source.set_property('location', stream_path)
+    #print("Playing file %s " %stream_path)
+    #source.set_property('location', stream_path)
     streammux.set_property('width', 1920)
     streammux.set_property('height', 1080)
     streammux.set_property('batch-size', 1)
