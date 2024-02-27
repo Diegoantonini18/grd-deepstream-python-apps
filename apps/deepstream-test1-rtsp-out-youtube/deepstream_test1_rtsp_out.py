@@ -159,9 +159,9 @@ def main(args):
 
 
     print("Creating Decoder \n")
-    decoder = Gst.ElementFactory.make("nvv4l2decoder", "nvv4l2-decoder")
-    if not decoder:
-        sys.stderr.write(" Unable to create Nvv4l2 Decoder \n")
+    #decoder = Gst.ElementFactory.make("nvv4l2decoder", "nvv4l2-decoder")
+    #if not decoder:
+    #    sys.stderr.write(" Unable to create Nvv4l2 Decoder \n")
     
     # Create nvstreammux instance to form batches from one or more sources.
     streammux = Gst.ElementFactory.make("nvstreammux", "Stream-muxer")
@@ -271,11 +271,11 @@ def main(args):
     if not sinkpad:
         sys.stderr.write(" Unable to get the sink pad of streammux \n")
     
-    srcpad = decoder.get_static_pad("src")
-    if not srcpad:
-        sys.stderr.write(" Unable to get source pad of decoder \n")
+    #srcpad = decoder.get_static_pad("src")
+    #if not srcpad:
+    #    sys.stderr.write(" Unable to get source pad of decoder \n")
     
-    srcpad.link(sinkpad)
+    #srcpad.link(sinkpad)
     streammux.link(pgie)
     pgie.link(nvvidconv)
     nvvidconv.link(nvosd)
