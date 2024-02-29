@@ -21,7 +21,7 @@ infer_config {
   max_batch_size: 4
   backend {
     trt_is {
-      model_name: "ssd_inception_v2_coco_2018_01_28"
+      model_name: "Segmentation_Industrial"
       version: -1
       model_repo {
         root: "../../../../samples/trtis_model_repo"
