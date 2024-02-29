@@ -40,7 +40,7 @@ PGIE_CLASS_ID_PERSON = 2
 PGIE_CLASS_ID_ROADSIGN = 3
 MUXER_BATCH_TIMEOUT_USEC = 33000
 
-def osd_sink_pad_buffer_probe(pad,info,u_data):
+def pgie_src_pad_buffer_probe(pad,info,u_data):
     frame_number=0
     #Intiallizing object counter with 0.
     obj_counter = {
