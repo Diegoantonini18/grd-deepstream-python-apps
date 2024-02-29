@@ -339,8 +339,8 @@ def main(args):
     tiler_columns = int(math.ceil((1.0 * number_sources) / tiler_rows))
     tiler.set_property("rows", tiler_rows)
     tiler.set_property("columns", tiler_columns)
-    tiler.set_property("width", TILED_OUTPUT_WIDTH)
-    tiler.set_property("height", TILED_OUTPUT_HEIGHT)
+    #tiler.set_property("width", TILED_OUTPUT_WIDTH)
+    #tiler.set_property("height", TILED_OUTPUT_HEIGHT)
     sink.set_property("qos", 0)
 
     pipeline.add(pgie)
