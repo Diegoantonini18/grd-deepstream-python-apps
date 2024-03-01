@@ -1,18 +1,5 @@
 ################################################################################
-# SPDX-FileCopyrightText: Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-# SPDX-License-Identifier: Apache-2.0
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# Adaptado para YOLOv3
 ################################################################################
 
 infer_config {
@@ -21,10 +8,10 @@ infer_config {
   max_batch_size: 4
   backend {
     trt_is {
-      model_name: "ssd_inception_v2_coco_2018_01_28"
+      model_name: "yolov3"  # Nombre del modelo actualizado a YOLOv3
       version: -1
       model_repo {
-        root: "/opt/nvidia/deepstream/deepstream-6.4/samples/trtis_model_repo"
+        root: "/opt/nvidia/deepstream/deepstream-6.4/sources/objectDetector_Yolo"  # Ruta actualizada al directorio de YOLO
         log_level: 2
         tf_gpu_memory_fraction: 0.4
         tf_disable_soft_placement: 0
@@ -35,18 +22,18 @@ infer_config {
   preprocess {
     network_format: IMAGE_FORMAT_RGB
     tensor_order: TENSOR_ORDER_NONE
-    maintain_aspect_ratio: 0
+    maintain_aspect_ratio: 1  # YOLOv3 generalmente mantiene la relación de aspecto
     normalize {
-      scale_factor: 1.0
+      scale_factor: 0.003921568627  # 1/255 para normalizar los valores de los pixeles a [0,1]
       channel_offsets: [0, 0, 0]
     }
   }
 
   postprocess {
-    labelfile_path: "./opt/nvidia/deepstream/deepstream-6.4/samples/trtis_model_repo/ssd_inception_v2_coco_2018_01_28/labels.txt"
+    labelfile_path: "/opt/nvidia/deepstream/deepstream-6.4/sources/objectDetector_Yolo/labels.txt"  # Ruta actualizada a la ubicación correcta
     detection {
-      num_detected_classes: 91
-      custom_parse_bbox_func: "NvDsInferParseCustomTfSSD"
+      num_detected_classes: 80  # Número de clases para COCO en YOLOv3
+      custom_parse_bbox_func: "NvDsInferParseCustomYolo"  # Función personalizada para el análisis de YOLOv3
       nms {
         confidence_threshold: 0.5
         iou_threshold: 0.3
@@ -60,7 +47,7 @@ infer_config {
   }
 
   custom_lib {
-    path: "/opt/nvidia/deepstream/deepstream/lib/libnvds_infercustomparser.so"
+    path: "/opt/nvidia/deepstream/deepstream/lib/libnvds_infercustomparser.so"  # Asegúrate de que esta ruta sea correcta para YOLOv3
   }
 }
 input_control {
@@ -70,5 +57,3 @@ input_control {
 output_control {
   output_tensor_meta: true
 }
-
-

@@ -1,21 +1,3 @@
-#!/usr/bin/env python3
-
-################################################################################
-# SPDX-FileCopyrightText: Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-# SPDX-License-Identifier: Apache-2.0
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-################################################################################
 import sys
 sys.path.append("../")
 from common.bus_call import bus_call
@@ -49,9 +31,19 @@ OSD_PROCESS_MODE = 0
 OSD_DISPLAY_TEXT = 0
 pgie_classes_str = ["Vehicle", "TwoWheeler", "Person", "RoadSign"]
 
+# Lista de objetos a detectar
+objects_to_detect = [
+    "wine glass", "cup", "fork", "knife", "spoon", "bowl", "banana", "apple", 
+    "sandwich", "orange", "broccoli", "carrot", "hot dog", "pizza", "donut", 
+    "cake", "chair", "couch", "potted plant", "bed", "mirror", "dining table", 
+    "window", "desk", "toilet", "door", "tv", "laptop", "mouse", "remote", 
+    "keyboard", "cell phone", "microwave", "oven", "toaster", "sink", 
+    "refrigerator", "blender", "book", "clock", "vase", "scissors", 
+    "teddy bear", "hair drier", "toothbrush"
+]
+
 # pgie_src_pad_buffer_probe  will extract metadata received on OSD sink pad
 # and update params for drawing rectangle, object information etc.
-
 
 def pgie_src_pad_buffer_probe(pad, info, u_data):
     frame_number = 0
@@ -85,6 +77,28 @@ def pgie_src_pad_buffer_probe(pad, info, u_data):
         if ts_from_rtsp:
             ts = frame_meta.ntp_timestamp/1000000000 # Retrieve timestamp, put decimal in proper position for Unix format
             print("RTSP Timestamp:",datetime.datetime.utcfromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')) # Convert timestamp to UTC
+
+        # Iterar sobre los objetos detectados en el marco actual
+        obj_meta = frame_meta.obj_meta_list
+        while obj_meta is not None:
+            try:
+                # Obtener el objeto y su clase
+                obj = pyds.NvDsObjectMeta.cast(obj_meta.data)
+                class_id = obj.class_id
+                class_str = pgie_classes_str[class_id]
+                obj_label = obj.label.decode()
+                
+                # Verificar si el objeto detectado está en nuestra lista
+                if obj_label in objects_to_detect:
+                    print("Object Detected:", obj_label)
+
+            except StopIteration:
+                break
+
+            try:
+                obj_meta = obj_meta.next
+            except StopIteration:
+                break
 
         try:
             l_frame = l_frame.next
